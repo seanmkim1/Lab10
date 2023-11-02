@@ -1,28 +1,176 @@
 ---
-title: ""
-author: ""
+title: "Lab10 Submission"
+author: "Sean Kim"
 format:
   html:
     embed-resources: true
 ---
 
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
-
 ```{r}
-1 + 1
+options(repos = c(CRAN = "https://cran.r-project.org"))
+
+install.packages('RSQLite')
+install.packages('DBI')
+
+library(RSQLite)
+library(DBI)
 ```
 
-You can add options to executable code like this
-
 ```{r}
-#| echo: false
-2 * 2
+con <- dbConnect(SQLite(), ":memory:")
+actor <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/actor.csv")
+rental <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/rental.csv")
+customer <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/customer.csv")
+payment <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/payment_p2007_01.csv")
+
+dbWriteTable(con, "actor", actor)
+dbWriteTable(con, "rental", rental)
+dbWriteTable(con, "customer", customer)
+dbWriteTable(con, "payment", payment)
+
+dbListTables(con)
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+```{sql, connection=con}
+
+PRAGMA table_info(actor)
+```
+
+Exercise 1
+
+```{sql, connection=con}
+
+SELECT actor_id, first_name, last_name
+FROM actor
+ORDER by last_name, first_name
+```
+
+Exercise 2
+
+```{sql, connection=con}
+SELECT actor_id, first_name, last_name
+FROM actor
+WHERE last_name IN ('WILLIAMS', 'DAVIS');
+```
+
+Exercise 3
+
+```{sql, connection=con}
+SELECT DISTINCT customer_id
+FROM rental
+WHERE date(rental_date) = '2005-07-05';
+```
+
+Exercise 4.1
+
+```{sql, connection=con}
+SELECT *
+FROM payment
+WHERE amount IN (1.99, 7.99, 9.99)
+
+```
+
+Exercise 4.2
+
+```{sql, connection=con}
+SELECT *
+FROM payment
+WHERE amount > 5
+```
+
+Exercise 4.3
+
+```{sql, connection=con}
+SELECT *
+FROM payment
+WHERE amount > 5 and amount < 8
+```
+
+Exercise 5
+
+```{sql, connection=con}
+SELECT payment.payment_id, payment.amount
+FROM payment
+INNER JOIN customer ON payment.customer_id = customer.customer_id
+WHERE customer.last_name = 'DAVIS';
+
+```
+
+Exercise 6.1
+
+```{sql, connection=con}
+SELECT COUNT(*) as total_rows
+FROM rental
+
+```
+
+Exercise 6.2
+
+```{sql, connection=con}
+SELECT customer_id, COUNT(*) as rental_count
+FROM rental
+GROUP by customer_id
+```
+
+Exercise 6.3
+
+```{sql, connection=con}
+SELECT customer_id, COUNT(*) as rental_count
+FROM rental
+GROUP BY customer_id
+ORDER BY rental_count DESC
+
+```
+
+Exercise 6.4
+
+```{sql, connection=con}
+SELECT customer_id, COUNT(*) as rental_count
+FROM rental
+GROUP BY customer_id
+HAVING rental_count >= 40
+
+```
+
+Exercise 7
+
+```{sql, connection=con}
+SELECT 
+  MAX(amount) as max_amount, 
+  MIN(amount) as min_amount, 
+  AVG(amount) as avg_amount, 
+  SUM(amount) as total_amount
+FROM payment
+
+```
+
+Exercise 7.1
+
+```{sql, connection=con}
+SELECT customer_id,  
+  MAX(amount) as max_amount, 
+  MIN(amount) as min_amount, 
+  AVG(amount) as avg_amount, 
+  SUM(amount) as total_amount
+FROM payment
+GROUP BY customer_id
+```
+
+Exercise 7.2
+
+```{sql, connection=con}
+SELECT customer_id, 
+  MAX(amount) as max_amount, 
+  MIN(amount) as min_amount, 
+  AVG(amount) as avg_amount, 
+  SUM(amount) as total_amount
+FROM payment
+GROUP BY customer_id
+HAVING COUNT(*) > 5;
+
+```
+
+```{r}
+# clean up
+dbDisconnect(con)
+```
